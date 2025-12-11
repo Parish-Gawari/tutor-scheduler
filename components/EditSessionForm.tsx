@@ -16,8 +16,8 @@ export default function EditSessionForm({ session, tutors, students }: any) {
   // ---- PREFILL FORM ----
   const [title, setTitle] = useState(session?.title || "");
   const [tutor, setTutor] = useState(session?.tutor?._id || "");
-  const [selectedStudents, setSelectedStudents] = useState(
-    session?.students?.map((s: any) => s._id) || [],
+  const [selectedStudents, setSelectedStudents] = useState<string[]>(
+    session.students?.map((s: any) => s._id) || [],
   );
 
   const [date, setDate] = useState(session.date?.split("T")[0] || "");
@@ -33,7 +33,7 @@ export default function EditSessionForm({ session, tutors, students }: any) {
 
   // ---------- MULTI SELECT HANDLER ----------
   function toggleStudent(id: string) {
-    setSelectedStudents((prev) =>
+    setSelectedStudents((prev: string[]) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   }
