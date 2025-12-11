@@ -14,8 +14,6 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("🔥🔥 AUTHORIZE RUNNING");
-
         if (!credentials?.email || !credentials.password) return null;
 
         await connectDB();
@@ -25,8 +23,6 @@ export const authOptions: NextAuthOptions = {
 
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) return null;
-
-        console.log("🔥 USER FOUND WITH ROLE:", user.role);
 
         return {
           id: user._id.toString(),
@@ -43,8 +39,6 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        console.log("🔥 JWT → USER ROLE:", user.role);
-
         token.role = (user as any).role;
         token.name = (user as any).name;
       }
@@ -52,8 +46,6 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      console.log("🔥 SESSION CALLBACK → TOKEN:", token);
-
       (session as any).user = {
         id: token.sub,
         name: token.name,

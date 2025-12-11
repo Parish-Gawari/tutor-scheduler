@@ -1,7 +1,13 @@
 import { getSession } from "../lib/auth";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
-import { LayoutDashboard, Calendar, FileText, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Calendar,
+  FileText,
+  LogOut,
+  PlusCircle,
+} from "lucide-react";
 
 export default async function DashboardLayout({
   children,
@@ -21,10 +27,15 @@ export default async function DashboardLayout({
     );
   }
 
+  const role = session.user.role;
+  const isAdmin = role === "admin";
+  const isTutor = role === "tutor";
+  const isStudent = role === "student";
+
   return (
     <div className="min-h-screen flex bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r shadow-sm p-2 flex flex-col">
+      <aside className="w-64 bg-white border-r shadow-sm p-4 flex flex-col">
         {/* Brand */}
         <div className="mb-10">
           <h2 className="text-2xl font-semibold">Tutor Scheduler</h2>
@@ -42,6 +53,7 @@ export default async function DashboardLayout({
             <LayoutDashboard size={20} /> Dashboard
           </Link>
 
+          {/* Everyone can view sessions list */}
           <Link
             href="/sessions"
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
@@ -49,20 +61,42 @@ export default async function DashboardLayout({
             <Calendar size={20} /> Sessions
           </Link>
 
+          {/* Create Session → only admin + tutor */}
+          {(isAdmin || isTutor) && (
+            <Link
+              href="/sessions/new"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
+            >
+              <PlusCircle size={20} /> Add Session
+            </Link>
+          )}
+
+          {/* Everyone can view resources */}
           <Link
             href="/resources"
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
           >
             <FileText size={20} /> Resources
           </Link>
+
+          {/* Create Resource → only admin + tutor */}
+          {(isAdmin || isTutor) && (
+            <Link
+              href="/resources/new"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
+            >
+              <PlusCircle size={20} /> Add Resource
+            </Link>
+          )}
         </nav>
 
         {/* Logout */}
         <div className="mt-6">
-          <button className="flex items-center gap-2 bg-red-600 text-white w-full justify-center px-3 py-2 rounded-lg hover:bg-red-700 transition">
+          <div className="flex items-center gap-2 bg-red-600 text-white w-full justify-center px-3 py-2 rounded-lg hover:bg-red-700 transition">
             <LogOut size={18} />
+            {/* FIX — LogoutButton should NOT be wrapped in button */}
             <LogoutButton />
-          </button>
+          </div>
         </div>
       </aside>
 

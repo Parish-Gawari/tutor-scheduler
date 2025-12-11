@@ -1,52 +1,53 @@
 "use client";
-
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { resourceSchema } from "@/app/schemas/resourceSchema";
-import { z } from "zod";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type ResourceForm = z.infer<typeof resourceSchema>;
-
-export default function NewResourcePage() {
+export default function CreateResource() {
   const router = useRouter();
+  const [form, setForm] = useState({ title: "", description: "", url: "" });
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ResourceForm>({
-    resolver: zodResolver(resourceSchema),
-  });
-
-  async function onSubmit(values: ResourceForm) {
+  async function handleSubmit(e: any) {
+    e.preventDefault();
     const res = await fetch("/api/resources", {
       method: "POST",
-      body: JSON.stringify(values),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
     });
-
     if (res.ok) router.push("/resources");
+    else alert("Failed");
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded shadow">
-      <h1 className="text-2xl mb-4 font-semibold">Add Resource</h1>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="max-w-3xl mx-auto p-8 bg-white rounded shadow">
+      <h1 className="text-2xl font-semibold mb-4">Add Resource</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label>Name</label>
-          <input {...register("name")} className="w-full border p-2 rounded" />
-          <p className="text-red-600 text-sm">{errors.name?.message}</p>
+          <label>Title</label>
+          <input
+            required
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
         </div>
-
         <div>
-          <label>URL</label>
-          <input {...register("url")} className="w-full border p-2 rounded" />
-          <p className="text-red-600 text-sm">{errors.url?.message}</p>
+          <label>Description</label>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
         </div>
-
+        <div>
+          <label>URL (optional)</label>
+          <input
+            value={form.url}
+            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            className="w-full border p-2 rounded"
+          />
+        </div>
         <button className="bg-blue-600 text-white px-4 py-2 rounded">
-          Add Resource
+          Create
         </button>
       </form>
     </div>

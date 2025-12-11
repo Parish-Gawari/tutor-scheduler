@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/db";
+import { connectDB } from "../../lib/db";
 import { Resource } from "@/models/Resource";
-import { resourceSchema } from "@/app/schemas/resourceSchema";
-import { getAuthUser } from "@/app/lib/authUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { canCreate } from "../../lib/roleCheck";
 
 export async function GET() {
   await connectDB();
-
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const resources = await Resource.find();
   return NextResponse.json(resources);
 }
@@ -18,20 +14,18 @@ export async function GET() {
 export async function POST(req: Request) {
   await connectDB();
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
 
-  const body = await req.json();
-  const parsed = resourceSchema.safeParse(body);
-
-  if (!parsed.success) {
+  if (!user || !canCreate(user)) {
     return NextResponse.json(
-      { error: parsed.error.errors[0].message },
-      { status: 400 },
+      { error: "Only admin/tutor can create resources" },
+      { status: 403 },
     );
   }
 
-  const resource = await Resource.create(parsed.data);
-  return NextResponse.json(resource, { status: 201 });
+  const body = await req.json();
+  const newResource = await Resource.create(body);
+
+  return NextResponse.json(newResource, { status: 201 });
 }

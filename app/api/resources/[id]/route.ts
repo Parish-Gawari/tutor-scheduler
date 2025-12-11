@@ -1,51 +1,56 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/db";
+import { connectDB } from "../../../lib/db";
 import { Resource } from "@/models/Resource";
-import { resourceSchema } from "@/app/schemas/resourceSchema";
-import { getAuthUser } from "@/app/lib/authUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
+import { canEdit, canDelete } from "../../../lib/roleCheck";
 
-export async function GET(req: Request, { params }: any) {
+export async function GET(req: Request, context: any) {
   await connectDB();
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await context.params;
 
-  const resource = await Resource.findById(params.id);
+  const resource = await Resource.findById(id);
   return NextResponse.json(resource);
 }
 
-export async function PUT(req: Request, { params }: any) {
+export async function PUT(req: Request, context: any) {
   await connectDB();
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
 
-  const body = await req.json();
-  const parsed = resourceSchema.safeParse(body);
-
-  if (!parsed.success) {
+  if (!user || !canEdit(user)) {
     return NextResponse.json(
-      { error: parsed.error.errors[0].message },
-      { status: 400 },
+      { error: "Only admin or tutor can edit resources" },
+      { status: 403 },
     );
   }
 
-  const updated = await Resource.findByIdAndUpdate(params.id, parsed.data, {
-    new: true,
-  });
+  const { id } = await context.params;
+  const body = await req.json();
+
+  const updated = await Resource.findByIdAndUpdate(id, body, { new: true });
 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: Request, { params }: any) {
-  await dbConnect();
+export async function DELETE(req: Request, context: any) {
+  await connectDB();
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
 
-  await Resource.findByIdAndDelete(params.id);
-  return NextResponse.json({ message: "Resource deleted" });
+  if (!user || !canDelete(user)) {
+    return NextResponse.json(
+      { error: "Only admin can delete resources" },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  await Resource.findByIdAndDelete(id);
+
+  return NextResponse.json({ message: "Deleted successfully" });
 }

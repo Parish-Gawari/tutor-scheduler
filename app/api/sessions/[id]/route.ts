@@ -1,50 +1,72 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/db";
+import { connectDB } from "../../../lib/db";
 import { Session } from "@/models/Session";
-import { sessionSchema } from "@/app/schemas/sessionSchema";
-import { getAuthUser } from "@/app/lib/authUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
+import { canEdit, canDelete } from "../../../lib/roleCheck";
+import mongoose from "mongoose";
 
-export async function GET(req: Request, { params }: any) {
+// GET /api/sessions/:id
+export async function GET(
+  req: Request,
+  props: { params: Promise<{ id: string }> },
+) {
   await connectDB();
+  const { id } = await props.params; // 🔥 FIX
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid Session ID" }, { status: 400 });
+  }
 
-  const session = await Session.findById(params.id);
+  const session = await Session.findById(id)
+    .populate("tutor", "name email")
+    .populate("students", "name email");
+
   return NextResponse.json(session);
 }
 
-export async function PUT(req: Request, { params }: any) {
+// PUT /api/sessions/:id
+export async function PUT(
+  req: Request,
+  props: { params: Promise<{ id: string }> },
+) {
   await connectDB();
+  const { id } = await props.params; // 🔥 FIX
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const sessionAuth = await getServerSession(authOptions);
+  const user = sessionAuth?.user;
 
-  const body = await req.json();
-  const parsed = sessionSchema.safeParse(body);
-
-  if (!parsed.success) {
+  if (!user || !canEdit(user)) {
     return NextResponse.json(
-      { error: parsed.error.errors[0].message },
-      { status: 400 },
+      { error: "Only admin/tutor can edit sessions" },
+      { status: 403 },
     );
   }
 
-  const updated = await Session.findByIdAndUpdate(params.id, parsed.data, {
-    new: true,
-  });
+  const body = await req.json();
+
+  const updated = await Session.findByIdAndUpdate(id, body, { new: true });
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: Request, { params }: any) {
-  await dbConnect();
+// DELETE /api/sessions/:id
+export async function DELETE(
+  req: Request,
+  props: { params: Promise<{ id: string }> },
+) {
+  await connectDB();
+  const { id } = await props.params; // 🔥 FIX
 
-  const user = await getAuthUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const sessionAuth = await getServerSession(authOptions);
+  const user = sessionAuth?.user;
 
-  await Session.findByIdAndDelete(params.id);
-  return NextResponse.json({ message: "Session deleted" });
+  if (!user || !canDelete(user)) {
+    return NextResponse.json(
+      { error: "Only admin can delete sessions" },
+      { status: 403 },
+    );
+  }
+
+  await Session.findByIdAndDelete(id);
+  return NextResponse.json({ message: "Session deleted successfully" });
 }

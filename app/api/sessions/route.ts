@@ -1,39 +1,56 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/db";
+import { connectDB } from "../../lib/db";
 import { Session } from "@/models/Session";
-import { sessionSchema } from "@/app/schemas/sessionSchema";
-import { getAuthUser } from "@/app/lib/authUser";
+import mongoose from "mongoose";
 
 export async function GET() {
   await connectDB();
 
-  const user = await getAuthUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const sessions = await Session.find()
+      .populate("tutor", "name email")
+      .populate("students", "name email");
 
-  const sessions = await Session.find().sort({ date: 1 });
-  return NextResponse.json(sessions);
+    return NextResponse.json(sessions);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch sessions", details: (error as any).message },
+      { status: 500 },
+    );
+  }
 }
 
+// ---- POST ALREADY EXISTS IN YOUR CASE ----
+// Ensure your POST is here too.
 export async function POST(req: Request) {
   await connectDB();
 
-  const user = await getAuthUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const body = await req.json();
-  const parsed = sessionSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.errors[0].message },
-      { status: 400 },
-    );
+  // Validate IDs
+  if (!mongoose.Types.ObjectId.isValid(body.tutor)) {
+    return NextResponse.json({ error: "Invalid tutor ID" }, { status: 400 });
   }
 
-  const session = await Session.create(parsed.data);
-  return NextResponse.json(session, { status: 201 });
+  if (body.students) {
+    for (const id of body.students) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json(
+          { error: `Invalid student ID: ${id}` },
+          { status: 400 },
+        );
+      }
+    }
+  }
+
+  const formatted = {
+    ...body,
+    tutor: new mongoose.Types.ObjectId(body.tutor),
+    students: (body.students || []).map(
+      (id: string) => new mongoose.Types.ObjectId(id),
+    ),
+  };
+
+  const newSession = await Session.create(formatted);
+  return NextResponse.json(newSession, { status: 201 });
 }

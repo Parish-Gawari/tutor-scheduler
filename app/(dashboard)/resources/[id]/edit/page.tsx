@@ -8,38 +8,61 @@ export default function EditResourcePage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [resource, setResource] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
 
+  // 🔥 Fetch resource on mount
   useEffect(() => {
+    if (!id) return;
+
     async function loadResource() {
-      const res = await fetch(`/api/resources/${id}`);
-      const data = await res.json();
-      setResource(data);
-      setName(data.name);
-      setUrl(data.url);
-      setLoading(false);
+      try {
+        const res = await fetch(`/api/resources/${id}`, { cache: "no-store" });
+        if (!res.ok) {
+          alert("Failed to load resource.");
+          return;
+        }
+
+        const data = await res.json();
+
+        // Prefill
+        setName(data.name || "");
+        setUrl(data.url || "");
+      } catch (err) {
+        console.error(err);
+        alert("Error loading resource");
+      } finally {
+        setLoading(false);
+      }
     }
+
     loadResource();
   }, [id]);
 
+  // 🔥 Save (PUT)
   async function handleSubmit(e: any) {
     e.preventDefault();
+    setSaving(true);
 
     const res = await fetch(`/api/resources/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ name, url }),
     });
+
+    setSaving(false);
 
     if (res.ok) {
       router.push("/resources");
       router.refresh();
     } else {
-      alert("Failed to update resource");
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Update failed (maybe permission issue)");
     }
   }
 
@@ -56,6 +79,7 @@ export default function EditResourcePage() {
             className="border w-full p-2 rounded"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="Resource name"
             required
           />
         </div>
@@ -66,15 +90,17 @@ export default function EditResourcePage() {
             className="border w-full p-2 rounded"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://example.com"
             required
           />
         </div>
 
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={saving}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
-          Save Changes
+          {saving ? "Saving…" : "Save Changes"}
         </button>
       </form>
     </div>

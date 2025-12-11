@@ -1,5 +1,6 @@
 import "./globals.css";
 import Footer from "../components/Footer";
+import { Providers } from "./providers";
 
 export const metadata = {
   title: "Tutor Scheduler",
@@ -13,12 +14,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-gray-100 overflow-x-hidden">
-        {/* Main Content */}
-        <main className="flex-1 w-full">{children}</main>
-        <Footer />
+      <body className="min-h-screen flex flex-col bg-gray-100">
+        <Providers>
+          <main className="flex-1 mx-auto w-full">{children}</main>
+        </Providers>
 
-        {/* Global Footer */}
+        <Footer />
       </body>
     </html>
   );

@@ -1,102 +1,171 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { sessionSchema } from "@/app/schemas/sessionSchema";
-import { z } from "zod";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-type SessionForm = z.infer<typeof sessionSchema>;
-
-export default function NewSessionPage() {
+export default function CreateSessionPage() {
   const router = useRouter();
+  const { data: session } = useSession();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SessionForm>({
-    resolver: zodResolver(sessionSchema),
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({
+    title: "",
+    tutor: "",
+    students: [] as string[],
+    date: "",
+    startTime: "",
+    endTime: "",
+    notes: "",
   });
 
-  async function onSubmit(values: SessionForm) {
+  useEffect(() => {
+    // RBAC: redirect student
+    if (session?.user?.role === "student") router.push("/dashboard");
+  }, [session, router]);
+
+  useEffect(() => {
+    async function load() {
+      const [tRes, sRes] = await Promise.all([
+        fetch("/api/users?role=tutor"),
+        fetch("/api/users?role=student"),
+      ]);
+      setTutors(await tRes.json());
+      setStudents(await sRes.json());
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     const payload = {
-      ...values,
-      startAt: `${values.date}T${values.startTime}:00.000Z`,
-      endAt: `${values.date}T${values.endTime}:00.000Z`,
-      students: [values.student],
+      title: form.title,
+      tutor: form.tutor,
+      students: form.students,
+      date: form.date,
+      startTime: form.startTime,
+      endTime: form.endTime,
+      notes: form.notes,
+      startAt: form.date + "T" + form.startTime + ":00",
+      endAt: form.date + "T" + form.endTime + ":00",
     };
 
     const res = await fetch("/api/sessions", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    if (res.ok) router.push("/sessions");
+    if (res.ok) {
+      router.push("/sessions");
+    } else {
+      const err = await res.json();
+      alert(err?.error || "Failed to create session");
+    }
   }
 
+  if (loading) return <div className="p-8">Loading...</div>;
+
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded shadow">
-      <h1 className="text-2xl mb-4 font-semibold">Create Session</h1>
+    <div className="max-w-3xl mx-auto p-8 bg-white rounded shadow">
+      <h1 className="text-2xl font-semibold mb-4">Create Session</h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label>Title</label>
-          <input {...register("title")} className="w-full border p-2 rounded" />
-          <p className="text-red-600 text-sm">{errors.title?.message}</p>
-        </div>
-
-        <div>
-          <label>Tutor ID</label>
-          <input {...register("tutor")} className="w-full border p-2 rounded" />
-          <p className="text-red-600 text-sm">{errors.tutor?.message}</p>
-        </div>
-
-        <div>
-          <label>Student ID</label>
+          <label className="block font-medium">Title</label>
           <input
-            {...register("student")}
-            className="w-full border p-2 rounded"
+            required
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="w-full border p-2 rounded mt-1"
           />
-          <p className="text-red-600 text-sm">{errors.student?.message}</p>
         </div>
 
         <div>
-          <label>Date</label>
-          <input
-            type="date"
-            {...register("date")}
-            className="w-full border p-2 rounded"
-          />
-          <p className="text-red-600 text-sm">{errors.date?.message}</p>
+          <label className="block font-medium">Tutor</label>
+          <select
+            required
+            value={form.tutor}
+            onChange={(e) => setForm({ ...form, tutor: e.target.value })}
+            className="w-full border p-2 rounded mt-1"
+          >
+            <option value="">Select a tutor</option>
+            {tutors.map((t) => (
+              <option key={t._id} value={t._id}>
+                {t.name} ({t.email})
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block font-medium">Students</label>
+          <select
+            multiple
+            value={form.students}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                students: Array.from(e.target.selectedOptions, (o) => o.value),
+              })
+            }
+            className="w-full border p-2 rounded mt-1 h-40"
+          >
+            {students.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name} ({s.email})
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-500 mt-1">
+            Hold Ctrl / Cmd to multi-select
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <label>Start Time</label>
+            <label className="block font-medium">Date</label>
             <input
-              type="time"
-              {...register("startTime")}
-              className="w-full border p-2 rounded"
+              required
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="w-full border p-2 rounded mt-1"
             />
-            <p className="text-red-600 text-sm">{errors.startTime?.message}</p>
           </div>
+
           <div>
-            <label>End Time</label>
+            <label className="block font-medium">Start</label>
             <input
+              required
               type="time"
-              {...register("endTime")}
-              className="w-full border p-2 rounded"
+              value={form.startTime}
+              onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+              className="w-full border p-2 rounded mt-1"
             />
-            <p className="text-red-600 text-sm">{errors.endTime?.message}</p>
+          </div>
+
+          <div>
+            <label className="block font-medium">End</label>
+            <input
+              required
+              type="time"
+              value={form.endTime}
+              onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+              className="w-full border p-2 rounded mt-1"
+            />
           </div>
         </div>
 
         <div>
-          <label>Notes</label>
+          <label className="block font-medium">Notes</label>
           <textarea
-            {...register("notes")}
-            className="w-full border p-2 rounded"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            className="w-full border p-2 rounded mt-1"
           />
         </div>
 
