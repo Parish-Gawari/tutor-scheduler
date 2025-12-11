@@ -29,7 +29,7 @@ export default async function ResourcesPage() {
             </a>
 
             {/* interactive buttons */}
-            <ResourceActions resourceId={r._id} role={role} />
+            <ResourceActions resourceId={r?._id ?? ""} role={role ?? ""} />
           </div>
         ))}
       </div>

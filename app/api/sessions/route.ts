@@ -20,8 +20,6 @@ export async function GET() {
   }
 }
 
-// ---- POST ALREADY EXISTS IN YOUR CASE ----
-// Ensure your POST is here too.
 export async function POST(req: Request) {
   await connectDB();
 
