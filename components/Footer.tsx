@@ -16,7 +16,7 @@ export default function Footer() {
           </a>
 
           <a
-            href="https://www.linkedin.com/in/parish-gawari"
+            href="https://www.linkedin.com/in/parish-gawari-363806219/"
             target="_blank"
             className="hover:text-blue-600"
           >
