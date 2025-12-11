@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,15 +16,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    console.log("🔥 FORM SUBMITTED → Calling NextAuth signIn()");
-
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: false, // IMPORTANT
+      redirect: false,
     });
-
-    console.log("🔥 SIGNIN RESPONSE:", res);
 
     if (res?.error) {
       setError("Invalid email or password");
@@ -79,6 +76,14 @@ export default function LoginPage() {
         >
           Login
         </button>
+
+        {/* 👉 ADDED SIGNUP LINK HERE */}
+        <p className="text-center text-gray-600 mt-4">
+          Don’t have an account?{" "}
+          <Link href="/signup" className="text-blue-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
       </form>
     </div>
   );
