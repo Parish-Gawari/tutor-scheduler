@@ -23,7 +23,7 @@ export default async function SessionsPage() {
             </p>
 
             {/* 🔥 All interactivity is inside client component */}
-            <SessionActions sessionId={s._id} role={role} />
+            <SessionActions sessionId={s?._id ?? ""} role={role ?? ""} />
           </div>
         ))}
       </div>
